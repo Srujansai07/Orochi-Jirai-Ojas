@@ -1,11 +1,11 @@
-// Jirai - Signup Page
+// Jirai - Signup Page (Mock Auth - No Verification)
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { mockSignUp } from '@/lib/mock-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,19 +26,21 @@ export default function SignupPage() {
         setError('');
 
         try {
-            const supabase = getSupabaseBrowserClient();
-            const { error } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: { full_name: name },
-                },
-            });
+            const result = await mockSignUp(email, password, name);
 
-            if (error) throw error;
+            if (!result.success) {
+                setError(result.error || 'Signup failed');
+                return;
+            }
+
             setSuccess(true);
-        } catch (err: any) {
-            setError(err.message || 'An error occurred');
+            // Redirect to home after 1 second
+            setTimeout(() => {
+                router.push('/');
+                router.refresh();
+            }, 1000);
+        } catch (err) {
+            setError('An error occurred');
         } finally {
             setLoading(false);
         }
@@ -55,18 +57,11 @@ export default function SignupPage() {
                     <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-emerald-500/30">
                         <CheckCircle2 className="w-10 h-10 text-white" />
                     </div>
-                    <h2 className="text-2xl font-bold text-white mb-3">Check your email!</h2>
+                    <h2 className="text-2xl font-bold text-white mb-3">Account Created!</h2>
                     <p className="text-slate-400 mb-6">
-                        We've sent you a confirmation link at <span className="text-white font-medium">{email}</span>
+                        Welcome to Jirai! Redirecting you to the dashboard...
                     </p>
-                    <p className="text-sm text-slate-500 mb-6">
-                        Click the link in your email to activate your account
-                    </p>
-                    <Link href="/auth/login">
-                        <Button className="w-full h-12 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-medium rounded-xl">
-                            Back to Login
-                        </Button>
-                    </Link>
+                    <Loader2 className="w-6 h-6 animate-spin text-violet-400 mx-auto" />
                 </motion.div>
             </div>
         );
@@ -74,9 +69,8 @@ export default function SignupPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-violet-950 flex items-center justify-center p-8">
-            {/* Animated gradient orbs */}
             <div className="fixed top-20 left-20 w-72 h-72 bg-violet-500/20 rounded-full blur-3xl animate-pulse" />
-            <div className="fixed bottom-20 right-20 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl animate-pulse delay-1000" />
+            <div className="fixed bottom-20 right-20 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl animate-pulse" />
 
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -85,7 +79,6 @@ export default function SignupPage() {
                 className="w-full max-w-md relative z-10"
             >
                 <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl">
-                    {/* Logo */}
                     <div className="flex items-center justify-center gap-2 mb-8">
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
                             <Sparkles className="w-6 h-6 text-white" />
@@ -150,13 +143,13 @@ export default function SignupPage() {
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="••••••••"
+                                    placeholder="Create a password"
                                     className="pl-10 h-12 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                                     required
-                                    minLength={6}
+                                    minLength={4}
                                 />
                             </div>
-                            <p className="text-xs text-slate-500">Must be at least 6 characters</p>
+                            <p className="text-xs text-slate-500">Must be at least 4 characters</p>
                         </div>
 
                         <Button

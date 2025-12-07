@@ -1,11 +1,11 @@
-// Jirai - Login Page
+// Jirai - Login Page (Mock Auth - No Verification)
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { mockLogin } from '@/lib/mock-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,17 +24,17 @@ export default function LoginPage() {
         setError('');
 
         try {
-            const supabase = getSupabaseBrowserClient();
-            const { error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
+            const result = await mockLogin(email, password);
 
-            if (error) throw error;
+            if (!result.success) {
+                setError(result.error || 'Login failed');
+                return;
+            }
+
             router.push('/');
             router.refresh();
-        } catch (err: any) {
-            setError(err.message || 'An error occurred');
+        } catch (err) {
+            setError('An error occurred');
         } finally {
             setLoading(false);
         }
@@ -50,19 +50,16 @@ export default function LoginPage() {
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-violet-950 flex">
             {/* Left side - Branding */}
             <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-                {/* Animated gradient orbs */}
                 <div className="absolute top-20 left-20 w-72 h-72 bg-violet-500/30 rounded-full blur-3xl animate-pulse" />
-                <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
+                <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl" />
 
-                {/* Content */}
                 <div className="relative z-10 p-12 flex flex-col justify-center">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
                     >
-                        {/* Logo */}
                         <div className="flex items-center gap-3 mb-12">
                             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-violet-500/30">
                                 <Sparkles className="w-7 h-7 text-white" />
@@ -82,7 +79,6 @@ export default function LoginPage() {
                             The AI-powered mind mapping tool that helps you think, plan, and create with clarity.
                         </p>
 
-                        {/* Features */}
                         <div className="space-y-4">
                             {features.map((feature, index) => (
                                 <motion.div
@@ -112,7 +108,6 @@ export default function LoginPage() {
                     className="w-full max-w-md"
                 >
                     <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl">
-                        {/* Mobile logo */}
                         <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
                                 <Sparkles className="w-5 h-5 text-white" />
@@ -153,12 +148,7 @@ export default function LoginPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="password" className="text-slate-300">Password</Label>
-                                    <Link href="/auth/forgot-password" className="text-sm text-violet-400 hover:text-violet-300">
-                                        Forgot password?
-                                    </Link>
-                                </div>
+                                <Label htmlFor="password" className="text-slate-300">Password</Label>
                                 <div className="relative">
                                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                                     <Input
@@ -166,7 +156,7 @@ export default function LoginPage() {
                                         type="password"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        placeholder="••••••••"
+                                        placeholder="Enter your password"
                                         className="pl-10 h-12 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                                         required
                                     />
@@ -191,7 +181,7 @@ export default function LoginPage() {
 
                         <div className="mt-8 text-center">
                             <p className="text-slate-400">
-                                Don't have an account?{' '}
+                                Do not have an account?{' '}
                                 <Link href="/auth/signup" className="text-violet-400 hover:text-violet-300 font-medium">
                                     Sign up free
                                 </Link>
