@@ -1,0 +1,212 @@
+// Prisma Schema for Jirai
+// Database: PostgreSQL (via Supabase)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================
+// User & Authentication
+// ============================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  workspaces      Workspace[]
+  conversations   Conversation[]
+  preferences     UserPreferences?
+}
+
+model UserPreferences {
+  id               String  @id @default(cuid())
+  userId           String  @unique
+  theme            String  @default("system") // light, dark, system
+  defaultDashboard String  @default("analysis") // analysis, workflow, combined
+  defaultLayout    String  @default("horizontal") // horizontal, vertical
+  notifications    Boolean @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// Workspaces & Projects
+// ============================================
+
+model Workspace {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  type            String   @default("analysis") // analysis, workflow, combined
+  layoutDirection String   @default("horizontal") // horizontal, vertical
+  viewportX       Float    @default(0)
+  viewportY       Float    @default(0)
+  viewportZoom    Float    @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Owner
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  nodes Node[]
+  edges Edge[]
+
+  @@index([userId])
+}
+
+// ============================================
+// Nodes
+// ============================================
+
+model Node {
+  id        String   @id @default(cuid())
+  type      String   // text, link, person, file, task, date, youtube, group, etc.
+  label     String
+  positionX Float
+  positionY Float
+  width     Float?
+  height    Float?
+  color     String?
+  icon      String?
+  collapsed Boolean  @default(false)
+  data      Json     // Flexible JSON for node-specific data
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Workspace relation
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // Parent node for grouping
+  parentId String?
+  parent   Node?   @relation("NodeHierarchy", fields: [parentId], references: [id])
+  children Node[]  @relation("NodeHierarchy")
+
+  // Edges
+  outgoingEdges Edge[] @relation("SourceNode")
+  incomingEdges Edge[] @relation("TargetNode")
+
+  // Timeline events (for workflow dashboard)
+  timelineEvents TimelineEvent[]
+
+  @@index([workspaceId])
+  @@index([type])
+  @@index([parentId])
+}
+
+// ============================================
+// Edges (Connections)
+// ============================================
+
+model Edge {
+  id       String  @id @default(cuid())
+  style    String  @default("solid") // solid, dashed, dotted, animated
+  color    String?
+  label    String?
+  animated Boolean @default(false)
+
+  // Connection points
+  sourceId     String
+  targetId     String
+  sourceHandle String?
+  targetHandle String?
+
+  source Node @relation("SourceNode", fields: [sourceId], references: [id], onDelete: Cascade)
+  target Node @relation("TargetNode", fields: [targetId], references: [id], onDelete: Cascade)
+
+  // Workspace relation
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([sourceId])
+  @@index([targetId])
+}
+
+// ============================================
+// Timeline Events (Workflow Dashboard)
+// ============================================
+
+model TimelineEvent {
+  id        String    @id @default(cuid())
+  startDate DateTime
+  endDate   DateTime?
+  allDay    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Node relation
+  nodeId String
+  node   Node   @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@index([nodeId])
+  @@index([startDate])
+}
+
+// ============================================
+// AI Conversations
+// ============================================
+
+model Conversation {
+  id        String   @id @default(cuid())
+  title     String   @default("New Conversation")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // User relation
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Messages
+  messages Message[]
+
+  @@index([userId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  role      String   // user, assistant, system
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  // Generated nodes from AI
+  generatedNodesJson Json?
+
+  // Conversation relation
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+}
+
+// ============================================
+// File Attachments
+// ============================================
+
+model Attachment {
+  id        String   @id @default(cuid())
+  fileName  String
+  fileUrl   String
+  fileSize  Int
+  mimeType  String
+  thumbnail String?
+  createdAt DateTime @default(now())
+
+  // Reference to the node it belongs to
+  nodeId String
+
+  @@index([nodeId])
+}
